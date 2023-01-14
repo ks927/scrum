@@ -66,11 +66,14 @@ const fn = {
     ask: () => {
         readline.question(`what would you like to do?
 [1] Add an item
-[2] Add a category
-[3] Save and quit\n`, (answer) => {
+[2] Edit an item
+[3] Add a category
+[4] Save and quit\n`, (answer) => {
             if (answer === '1') {
                 fn.add();
-            } else if (answer === '3') {
+            } else if (answer === '2') {
+                fn.edit();
+            } else if (answer === '4') {
                 fn.done();
             } else {
                 console.log('not implemented yet...');
@@ -95,24 +98,40 @@ const fn = {
 
     findLastScrum: () => {
         let count = 1;
-        let previousDay = dd - count;
+        let temp = dd;
+        if (temp === 1) {
+            temp = 32;
+        }
+        let previousDay = temp - count;
+        if (previousDay < 10) {
+            previousDay = `0${previousDay}`;
+        }
         let lastScrum;
 
         if (fs.existsSync(`./${thisMonthDir}/${mm}-${previousDay}-${yyyy}.txt`)) {
             lastScrum = fs.readFileSync(`${thisMonthDir}/${mm}-${previousDay}-${yyyy}.txt`, 'utf-8')
+            scrum = JSON.parse(lastScrum);
+            return;
         }
 
         while (!fs.existsSync(`./${thisMonthDir}/${mm}-${previousDay}-${yyyy}.txt`)) {
+            if (count === 100) {
+                console.log(c.Red("Could not find yesterday's scrum"));
+                return;
+            }
             count++;
-            previousDay = dd - count;
+            previousDay = temp - count;
+            if (previousDay < 10) {
+                previousDay = `0${previousDay}`;
+            }
             
             if (fs.existsSync(`./${thisMonthDir}/${mm}-${previousDay}-${yyyy}.txt`)) {
                 lastScrum = fs.readFileSync(`${thisMonthDir}/${mm}-${previousDay}-${yyyy}.txt`, 'utf-8')
+                scrum = JSON.parse(lastScrum);
+                return;
             }
         }
 
-        scrum = JSON.parse(lastScrum);
-        return;
     },
 
     add: () => {
@@ -126,6 +145,44 @@ const fn = {
             return fn.today();
 
         });
+    },
+
+    edit: () => {
+        readline.question(`Which category would you like to edit?
+        [1] Today
+        [2] Next
+        [3] Blocks?\n`,
+        (category) => {
+            switch(category.toLowerCase()) {
+                case '1' || 'today':
+                    console.log(scrum.today.map((task, idx) => `${task}`));
+                    break;
+                case '2' || 'next':
+                    console.log(scrum.next.map((task, idx) => `${task}`));
+                    break;
+                case '3' || 'roadblocks':
+                    console.log(scrum.blocks.map((task, idx) => `${task}`));
+                    break;
+                default:
+                    console.log('try again')
+
+            }
+
+            readline.question(`Which task would you like to edit?\n`,
+            (answer) => {
+                console.log('switch', answer)
+                scrum.today.map((task, idx) => idx.toString() === answer &&
+                    console.log(`${task}`));
+                    
+                readline.question(`Update what ${answer} should reader:\n`,
+                (update) => {
+                    scrum.today[answer] = '[' + answer.toString()+ ']' + update;
+                    console.log(scrum);
+                    fn.done();
+                });
+
+            });
+        })
     },
 
     today: () => {
